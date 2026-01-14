@@ -4,7 +4,8 @@ This project is inspired by the classic Pac-Man game implemented in C, featuring
 
 ## Features
 
--   **Classic Pac-Man Gameplay:** A faithful recreation of the core Pac-Man mechanics.
+-   **Classic Pac-Man Gameplay:** A faithful recreation of the core Pac-Man mechanics, including dots, power-ups, and ghost house behavior.
+-   **Power-Up System:** Consume "Big Pills" to turn ghosts frightened (blue), allowing Pac-Man to eat them for significant bonus points.
 -   **Reinforcement Learning Agent:** A Q-learning agent that explores the game and learns optimal strategies over time.
 -   **Pluggable Architecture:** The agent's core logic is decoupled from the game. You can easily swap out different state representation (`features.c`) and reward (`rewards.c`) functions to experiment with agent behavior.
 -   **Manual Override:** Take control of Pac-Man at any time with the arrow keys to guide the agent's learning through demonstration.
@@ -80,19 +81,21 @@ The agent's "state" is a single integer derived from combining several game feat
 1.  **Score Level (4 values):** The current score is binned into one of four levels (0-25%, 25-50%, 50-75%, 75-100%) to give the agent a sense of game progression.
 2.  **Ghost Positions (9^4 values):** The map is divided into a 3x3 grid, and each of the four ghosts' positions is recorded as one of these 9 cells.
 3.  **Valid Moves (16 values):** A 4-bit mask represents which of the four directions Pac-Man can legally move into from his current position.
+4.  **Frightened Status (16 values):** A 4-bit mask representing which ghosts are currently in a frightened (blue) state and can be eaten.
 
-This results in a total state space of `4 * 9^4 * 16 = 419,904` unique states.
+This results in a total state space of `4 * 9^4 * 16 * 16 = 6,718,464` unique states.
 
 ### Reward Function
 
 The agent's behavior is shaped by the rewards it receives:
 
--   **Large Positive Reward:** For winning the game by eating all the dots.
--   **Positive Reward:** For eating a dot.
--   **Small Negative Penalty ("Living Penalty"):** For every step taken, to encourage efficiency.
--   **Negative Penalty:** For reversing direction, to discourage oscillation.
--   **Large Negative Penalty:** For hitting a wall.
--   **Very Large Negative Penalty:** For getting caught by a ghost.
+-   **Large Positive Reward:** For winning the game by eating all the dots and big pills.
+-   **Positive Reward:** For eating a dot or a big pill (+10.0).
+-   **Significant Positive Reward:** For eating a frightened ghost (+50.0).
+-   **Small Negative Penalty ("Living Penalty"):** For every step taken, to encourage efficiency (-0.5).
+-   **Negative Penalty:** For reversing direction, to discourage oscillation (-2.0).
+-   **Large Negative Penalty:** For hitting a wall (-10.0).
+-   **Very Large Negative Penalty:** For getting caught by a ghost (-200.0).
 
 ### Algorithm
 
