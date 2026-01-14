@@ -3,3 +3,8 @@
 
 # Final executable
 pacman
+
+# IDE and cache files
+.vscode/
+.cache/
+*.json

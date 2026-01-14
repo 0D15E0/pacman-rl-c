@@ -3,9 +3,9 @@
 
 // The number of unique states produced by the get_complex_state_id function.
 // This is crucial for allocating the correct size for the Q-Table.
-// New size: 4 (score) * 9^4 (ghosts) * 16 (valid moves) * 16 (frightened mask)
-// = 6,718,464
-#define COMPLEX_STATE_SPACE_SIZE 6720000
+// New size: 4 (dot dir) * 3 (ghost dist) * 4 (ghost dir) * 2 (frightened) * 16
+// (valid moves) = 1,536. Using 2000 as a safe buffer.
+#define COMPLEX_STATE_SPACE_SIZE 2000
 
 /**
  * @brief Calculates a complex state ID based on multiple game features.

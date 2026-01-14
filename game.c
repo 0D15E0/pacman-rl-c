@@ -1,5 +1,4 @@
 #include "game.h"
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -219,15 +218,18 @@ void move_ghosts_deterministic() {
   }
 }
 
+// (Function load_texture_from_png deleted)
+
 void init_sdl_and_window(SDL_Window **window, SDL_Renderer **renderer) {
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n",
             SDL_GetError());
     exit(1);
   }
-  *window = SDL_CreateWindow("Pac-Man RL (Quadrant Rewards)",
-                             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                             SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+
+  *window = SDL_CreateWindow("Pac-Man RL", SDL_WINDOWPOS_CENTERED,
+                             SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH,
+                             SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
   if (*window == NULL) {
     fprintf(stderr, "Window could not be created! SDL_Error: %s\n",
             SDL_GetError());
@@ -244,59 +246,103 @@ void init_sdl_and_window(SDL_Window **window, SDL_Renderer **renderer) {
   }
 }
 
+void draw_pixel_char(SDL_Renderer *renderer, int x, int y,
+                     const unsigned char glyph[5], int scale) {
+  for (int row = 0; row < 5; row++) {
+    for (int col = 0; col < 3; col++) {
+      if (glyph[row] & (1 << (2 - col))) {
+        SDL_Rect r = {x + col * scale, y + row * scale, scale, scale};
+        SDL_RenderFillRect(renderer, &r);
+      }
+    }
+  }
+}
+
+void draw_score(SDL_Renderer *renderer, int x, int y, int score) {
+  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+  int scale = 3;
+  int spacing = 4 * scale;
+
+  // Draw "SCORE:"
+  draw_pixel_char(renderer, x, y, char_S, scale);
+  x += spacing;
+  draw_pixel_char(renderer, x, y, char_C, scale);
+  x += spacing;
+  draw_pixel_char(renderer, x, y, char_O, scale);
+  x += spacing;
+  draw_pixel_char(renderer, x, y, char_R, scale);
+  x += spacing;
+  draw_pixel_char(renderer, x, y, char_E, scale);
+  x += spacing;
+  draw_pixel_char(renderer, x, y, char_COLON, scale);
+  x += spacing;
+
+  // Draw Score Value
+  char buf[16];
+  sprintf(buf, "%d", score);
+  for (int i = 0; buf[i] != '\0'; i++) {
+    draw_pixel_char(renderer, x, y, font_data[buf[i] - '0'], scale);
+    x += spacing;
+  }
+}
+
 void render_game(SDL_Renderer *renderer) {
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
   SDL_RenderClear(renderer);
 
+  // --- Draw Header ---
+  draw_score(renderer, 10, 8, current_score);
+
+  // --- Draw Map ---
   for (int r = 0; r < MAP_ROWS; r++) {
     for (int c = 0; c < MAP_COLS; c++) {
       int id = map[r][c];
+      int draw_y = r * TILE_SIZE + HEADER_HEIGHT;
       if (id == TILE_WALL) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 200, 255);
-        SDL_Rect wall = {c * TILE_SIZE + 2, r * TILE_SIZE + 2, TILE_SIZE - 4,
+        SDL_Rect wall = {c * TILE_SIZE + 2, draw_y + 2, TILE_SIZE - 4,
                          TILE_SIZE - 4};
         SDL_RenderFillRect(renderer, &wall);
       } else if (id == TILE_DOT) {
         SDL_SetRenderDrawColor(renderer, 255, 184, 151, 255);
-        SDL_Rect dot = {c * TILE_SIZE + 6, r * TILE_SIZE + 6, 4, 4};
+        SDL_Rect dot = {c * TILE_SIZE + 6, draw_y + 6, 4, 4};
         SDL_RenderFillRect(renderer, &dot);
       } else if (id == TILE_BIG_PILL) {
         SDL_SetRenderDrawColor(renderer, 255, 184, 151, 255);
-        SDL_Rect dot = {c * TILE_SIZE + 4, r * TILE_SIZE + 4, 8, 8};
+        SDL_Rect dot = {c * TILE_SIZE + 4, draw_y + 4, 8, 8};
         SDL_RenderFillRect(renderer, &dot);
       } else if (id == TILE_DOOR) {
         SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
-        SDL_Rect door = {c * TILE_SIZE, r * TILE_SIZE + TILE_SIZE / 2 - 1,
-                         TILE_SIZE, 2};
+        SDL_Rect door = {c * TILE_SIZE, draw_y + TILE_SIZE / 2 - 1, TILE_SIZE,
+                         2};
         SDL_RenderFillRect(renderer, &door);
       }
     }
   }
 
+  // --- Draw Pacman ---
   SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
-  SDL_Rect pacRect = {pacman.x * TILE_SIZE, pacman.y * TILE_SIZE, TILE_SIZE,
+  SDL_Rect pacRect = {pacman.x * TILE_SIZE,
+                      pacman.y * TILE_SIZE + HEADER_HEIGHT, TILE_SIZE,
                       TILE_SIZE};
   SDL_RenderFillRect(renderer, &pacRect);
 
+  // --- Draw Ghosts ---
   for (int i = 0; i < 4; i++) {
     if (ghosts[i].is_eaten) {
-      SDL_SetRenderDrawColor(renderer, 200, 200, 200,
-                             255); // Eyes only (white/grey)
-      SDL_Rect gRect = {ghosts[i].x * TILE_SIZE + 4,
-                        ghosts[i].y * TILE_SIZE + 4, 8, 8};
-      SDL_RenderFillRect(renderer, &gRect);
+      // White/Gray for eaten eyes
+      SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
     } else if (ghosts[i].is_frightened) {
-      SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255); // Blue
-      SDL_Rect gRect = {ghosts[i].x * TILE_SIZE, ghosts[i].y * TILE_SIZE,
-                        TILE_SIZE, TILE_SIZE};
-      SDL_RenderFillRect(renderer, &gRect);
+      // Classic Blue for frightened
+      SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
     } else {
       SDL_SetRenderDrawColor(renderer, ghosts[i].color.r, ghosts[i].color.g,
                              ghosts[i].color.b, 255);
-      SDL_Rect gRect = {ghosts[i].x * TILE_SIZE, ghosts[i].y * TILE_SIZE,
-                        TILE_SIZE, TILE_SIZE};
-      SDL_RenderFillRect(renderer, &gRect);
     }
+    SDL_Rect gRect = {ghosts[i].x * TILE_SIZE,
+                      ghosts[i].y * TILE_SIZE + HEADER_HEIGHT, TILE_SIZE,
+                      TILE_SIZE};
+    SDL_RenderFillRect(renderer, &gRect);
   }
 
   SDL_RenderPresent(renderer);

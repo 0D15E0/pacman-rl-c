@@ -9,7 +9,8 @@
 #define MAP_COLS 28
 #define MAP_ROWS 31
 #define SCREEN_WIDTH (MAP_COLS * TILE_SIZE)
-#define SCREEN_HEIGHT (MAP_ROWS * TILE_SIZE)
+#define HEADER_HEIGHT 32
+#define SCREEN_HEIGHT (MAP_ROWS * TILE_SIZE + HEADER_HEIGHT)
 
 // DIRECTIONS
 #define RIGHT 0
@@ -178,6 +179,31 @@ void move_ghosts_deterministic();
 // --- HELPER FUNCTIONS ---
 void check_ghost_collisions(bool *episode_done);
 void init_sdl_and_window(SDL_Window **window, SDL_Renderer **renderer);
+// --- FONT RENDERING ---
+static const unsigned char font_data[10][5] = {
+    {0x7, 0x5, 0x5, 0x5, 0x7}, // 0
+    {0x2, 0x6, 0x2, 0x2, 0x7}, // 1
+    {0x7, 0x1, 0x7, 0x4, 0x7}, // 2
+    {0x7, 0x1, 0x7, 0x1, 0x7}, // 3
+    {0x5, 0x5, 0x7, 0x1, 0x1}, // 4
+    {0x7, 0x4, 0x7, 0x1, 0x7}, // 5
+    {0x7, 0x4, 0x7, 0x5, 0x7}, // 6
+    {0x7, 0x1, 0x1, 0x1, 0x1}, // 7
+    {0x7, 0x5, 0x7, 0x5, 0x7}, // 8
+    {0x7, 0x5, 0x7, 0x1, 0x7}  // 9
+};
+
+static const unsigned char char_S[5] = {0x7, 0x4, 0x7, 0x1, 0x7};
+static const unsigned char char_C[5] = {0x7, 0x4, 0x4, 0x4, 0x7};
+static const unsigned char char_O[5] = {0x7, 0x5, 0x5, 0x5, 0x7};
+static const unsigned char char_R[5] = {0x7, 0x5, 0x7, 0x6, 0x5};
+static const unsigned char char_E[5] = {0x7, 0x4, 0x6, 0x4, 0x7};
+static const unsigned char char_COLON[5] = {0x0, 0x2, 0x0, 0x2, 0x0};
+
+void draw_pixel_char(SDL_Renderer *renderer, int x, int y,
+                     const unsigned char glyph[5], int scale);
+void draw_score(SDL_Renderer *renderer, int x, int y, int score);
+
 void render_game(SDL_Renderer *renderer);
 void cleanup_sdl(SDL_Window *window, SDL_Renderer *renderer);
 
