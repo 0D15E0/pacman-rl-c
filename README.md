@@ -4,9 +4,10 @@ This project is inspired by the classic Pac-Man game implemented in C, featuring
 
 ## Features
 
--   **Classic Pac-Man Gameplay:** A faithful recreation of the core Pac-Man mechanics, including dots, power-ups, and ghost house behavior.
+-   **Classic Pac-Man Gameplay:** A faithful recreation of the core Pac-Man mechanics, including dots, power-ups, and ghost house behavior recreated with simple colored squares for a clean, retro feel.
+-   **On-Screen Score Display:** Real-time score tracking at the top of the screen rendered using a custom-built pixel font.
+-   **Enhanced Reinforcement Learning:** A highly optimized Q-learning agent that uses relative spatial features for extremely fast convergence.
 -   **Power-Up System:** Consume "Big Pills" to turn ghosts frightened (blue), allowing Pac-Man to eat them for significant bonus points.
--   **Reinforcement Learning Agent:** A Q-learning agent that explores the game and learns optimal strategies over time.
 -   **Pluggable Architecture:** The agent's core logic is decoupled from the game. You can easily swap out different state representation (`features.c`) and reward (`rewards.c`) functions to experiment with agent behavior.
 -   **Manual Override:** Take control of Pac-Man at any time with the arrow keys to guide the agent's learning through demonstration.
 -   **Turbo Mode:** Disable rendering to run training simulations at maximum speed.
@@ -76,26 +77,30 @@ The agent learns using a standard Q-learning algorithm.
 
 ### State Representation
 
-The agent's "state" is a single integer derived from combining several game features:
+The agent's "state" is a single integer representing the local environment, reducing the state space from millions to just **~1,500 unique states**. This allows the agent to reach high performance within minutes:
 
-1.  **Score Level (4 values):** The current score is binned into one of four levels (0-25%, 25-50%, 50-75%, 75-100%) to give the agent a sense of game progression.
-2.  **Ghost Positions (9^4 values):** The map is divided into a 3x3 grid, and each of the four ghosts' positions is recorded as one of these 9 cells.
-3.  **Valid Moves (16 values):** A 4-bit mask represents which of the four directions Pac-Man can legally move into from his current position.
-4.  **Frightened Status (16 values):** A 4-bit mask representing which ghosts are currently in a frightened (blue) state and can be eaten.
-
-This results in a total state space of `4 * 9^4 * 16 * 16 = 6,718,464` unique states.
+1.  **Nearest Dot Direction (4 values):** The direction (UP, DOWN, LEFT, RIGHT) to the closest remaining dot or big pill.
+2.  **Nearest Ghost Proximity (3 levels):** Discretized distance to the closest ghost (Near: 1-2 tiles, Medium: 3-5 tiles, Far: 6+ tiles).
+3.  **Nearest Ghost Direction (4 values):** The relative direction to the closest ghost.
+4.  **Ghost Frightened Status (2 values):** Whether the nearest ghost is currently frightened (blue) and edible.
+5.  **Valid Moves (16 values):** A 4-bit mask of legal directions at the current position.
 
 ### Reward Function
 
-The agent's behavior is shaped by the rewards it receives:
+The agent receives "dense" feedback on every step to guide it towards goals and away from danger:
 
--   **Large Positive Reward:** For winning the game by eating all the dots and big pills.
--   **Positive Reward:** For eating a dot or a big pill (+10.0).
--   **Significant Positive Reward:** For eating a frightened ghost (+50.0).
--   **Small Negative Penalty ("Living Penalty"):** For every step taken, to encourage efficiency (-0.5).
--   **Negative Penalty:** For reversing direction, to discourage oscillation (-2.0).
--   **Large Negative Penalty:** For hitting a wall (-10.0).
--   **Very Large Negative Penalty:** For getting caught by a ghost (-200.0).
+-   **Goal Rewards:**
+    -   Level Clear: +1000.0
+    -   Eating a Dot/Pill: +20.0
+    -   Eating a Ghost: +200.0
+    -   **Proximity Bonus:** +2.0 for moving closer to the nearest dot.
+-   **Danger Penalties:**
+    -   Caught by Ghost: -500.0
+    -   **Proximity Penalty:** -15.0 for moving towards a non-frightened ghost within 5 tiles.
+    -   Wall Hit: -15.0
+-   **Efficiency:** 
+    -   Step Penalty: -1.0 (encourages speed).
+    -   Reversing Direction: -5.0 (discourages oscillation).
 
 ### Algorithm
 
